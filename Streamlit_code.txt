@@ -1,0 +1,38 @@
+import streamlit as st
+import tensorflow as tf
+import numpy as np
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import pickle
+
+# Load the trained model
+model = tf.keras.models.load_model("next_word.h5")  # Ensure the model file exists in your directory
+
+# Load the tokenizer
+with open("tokenizer.pkl", "rb") as f:
+    tokenizer = pickle.load(f)
+
+# Streamlit UI
+st.title("Next Word Predictor")
+
+# User inputs
+text = st.text_input("Enter a phrase:")
+n_words = st.number_input("Number of words to predict:", min_value=1, max_value=20, value=5, step=1)
+
+if st.button("Predict"):
+    if text.strip():
+        for _ in range(n_words):
+            token_text = tokenizer.texts_to_sequences([text])[0]
+            padded_token_text = pad_sequences([token_text], maxlen=56, padding='pre')
+            pos = np.argmax(model.predict(padded_token_text))
+
+            # Find the corresponding word
+            word = next((w for w, i in tokenizer.word_index.items() if i == pos), None)
+            if word:
+                text += " " + word
+            else:
+                break  # Stop if no valid word is found
+
+        st.write("**Predicted Text:**", text)
+    else:
+        st.warning("Please enter a phrase to predict next words.")
